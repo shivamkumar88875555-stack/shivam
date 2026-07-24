@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>APK Loader • QR Installer</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--p:#6C2BD9;--s:#00E5A0;--d:#1a1a2e;--c:#16213e;--l:#0f3460;--t:#e94560;--b:#ffffff20;--br:12px}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--d);color:#fff;min-height:100vh;overflow-x:hidden}
+.container{max-width:860px;margin:0 auto;padding:14px}
+header{text-align:center;padding:18px 0 8px}
+header h1{font-size:22px;background:linear-gradient(135deg,var(--s),var(--p));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-weight:800}
+header p{font-size:12px;color:#888;margin-top:2px}
+.tabs{display:flex;gap:6px;margin:12px 0;background:var(--b);border-radius:var(--br);padding:4px}
+.tab{flex:1;padding:10px;text-align:center;border:none;background:transparent;color:#888;font-size:13px;font-weight:600;border-radius:10px;cursor:pointer;transition:.2s}
+.tab.active{background:var(--p);color:#fff;box-shadow:0 4px 15px #6C2BD955}
+.tab:hover:not(.active){color:#fff}
+.card{background:var(--c);border-radius:var(--br);padding:18px;margin-bottom:14px;border:1px solid #ffffff0a;backdrop-filter:blur(10px)}
+.card h2{font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h2 i{font-style:normal}
+.upload-zone{position:relative;border:2px dashed var(--l);border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:.3s;background:#ffffff04}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--p);background:#6C2BD908}
+.upload-zone.has-file{border-color:var(--s);background:#00E5A008}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upload-zone .icon{font-size:42px;line-height:1;margin-bottom:8px}
+.upload-zone .label{font-size:14px;color:#aaa}
+.upload-zone .hint{font-size:11px;color:#666;margin-top:6px}
+.upload-zone .fname{font-size:13px;color:var(--s);margin-top:8px;font-weight:600;word-break:break-all}
+.file-info{display:flex;align-items:center;gap:12px;padding:10px 14px;background:#ffffff08;border-radius:10px;margin-top:10px}
+.file-info .fi-icon{font-size:28px}
+.file-info .fi-detail{flex:1}
+.file-info .fi-name{font-size:13px;font-weight:600}
+.file-info .fi-size{font-size:11px;color:#888}
+.file-info .fi-del{background:var(--t);border:none;color:#fff;width:32px;height:32px;border-radius:8px;font-size:16px;cursor:pointer}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 20px;border:none;border-radius:10px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s;text-decoration:none;color:#fff;width:100%}
+.btn-primary{background:linear-gradient(135deg,var(--p),#8B3DFF)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px #6C2BD955}
+.btn-success{background:linear-gradient(135deg,var(--s),#00C853)}
+.btn-danger{background:var(--t)}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none!important}
+.qr-box{display:flex;flex-direction:column;align-items:center;gap:12px;padding:14px 0}
+.qr-box canvas,#qrcode{background:#fff;padding:12px;border-radius:12px}
+.qr-actions{display:flex;gap:8px;width:100%;margin-top:4px}
+.qr-actions .btn{flex:1;padding:10px;font-size:12px}
+.link-box{background:#ffffff08;border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-top:8px}
+.link-box input{flex:1;background:transparent;border:none;color:#fff;font-size:12px;outline:none;font-family:monospace}
+.link-box button{background:var(--l);border:none;color:#fff;padding:6px 12px;border-radius:6px;font-size:11px;cursor:pointer;white-space:nowrap}
+.scanner-container{position:relative;border-radius:12px;overflow:hidden;background:#000;min-height:240px}
+.scanner-container video{border-radius:12px;width:100%;display:block}
+#reader{width:100%!important;min-height:240px!important}
+#reader video{object-fit:cover!important}
+#reader__dashboard_section{background:transparent!important}
+#reader__dashboard_section_swaplink{color:var(--s)!important;font-size:13px!important;padding:8px!important}
+#reader__scan_region{min-height:220px!important;background:#000!important}
+.scan-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;opacity:.3}
+.scan-result{text-align:center;padding:10px;background:#ffffff08;border-radius:10px;margin-top:8px;font-size:13px;word-break:break-all}
+.scan-result strong{color:var(--s)}
+.result-actions{display:flex;gap:8px;margin-top:8px}
+.result-actions .btn{font-size:12px;padding:9px}
+.history-item{display:flex;align-items:center;gap:10px;padding:10px;background:#ffffff08;border-radius:10px;margin-top:6px;font-size:13px}
+.history-item .hi-icon{font-size:20px}
+.history-item .hi-info{flex:1;overflow:hidden}
+.history-item .hi-name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.history-item .hi-time{font-size:10px;color:#888}
+.history-item .hi-btn{background:var(--l);border:none;color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer}
+.history-item .hi-btn.install{background:var(--s);color:#000}
+.status-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.status-badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.status-badge.ready{background:#00E5A022;color:var(--s)}
+.status-badge.stored{background:#6C2BD922;color:#B388FF}
+.status-badge.total{background:#0f346077;color:#90CAF9}
+.d-none{display:none!important}
+.mt-8{margin-top:8px}
+.text-center{text-align:center}
+.gap-8{display:flex;gap:8px}
+.flex-1{flex:1}
+@media(max-width:480px){.container{padding:10px}.card{padding:14px}.upload-zone{padding:20px 12px}}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>⚡ APK Loader</h1>
+    <p>Upload • QR • Install — One Click</p>
+  </header>
+
+  <!-- Status -->
+  <div class="status-bar" id="statusBar">
+    <span class="status-badge ready">● Ready</span>
+    <span class="status-badge stored" id="storedBadge">📦 0 stored</span>
+    <span class="status-badge total" id="totalBadge">💾 <span id="totalSize">0 MB</span></span>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" data-tab="upload">📤 Upload</button>
+    <button class="tab" data-tab="scan">📷 Scan</button>
+    <button class="tab" data-tab="history">📋 History</button>
+  </div>
+
+  <!-- ========= TAB: UPLOAD ========= -->
+  <div class="tab-content" id="tabUpload">
+    <div class="card">
+      <h2><span>📁</span> Select File</h2>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="fileInput" accept=".apk,.jpg,.jpeg,.png,.bmp,.gif,.webp">
+        <div class="icon" id="zoneIcon">📦</div>
+        <div class="label" id="zoneLabel">Tap to choose APK or image</div>
+        <div class="hint" id="zoneHint">Supports .apk · .jpg · .png · .gif · .webp</div>
+        <div class="fname d-none" id="fileName"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span>🔗</span> OR Enter URL</h2>
+      <div class="link-box">
+        <input type="url" id="urlInput" placeholder="https://example.com/app.apk" autocomplete="off">
+        <button id="urlFetchBtn">Fetch</button>
+      </div>
+      <div class="mt-8" id="urlStatus" style="font-size:12px;color:#888"></div>
+    </div>
+
+    <div class="card" id="generateCard">
+      <h2><span>📲</span> Generate QR Code</h2>
+      <div class="qr-box">
+        <div id="qrcode"></div>
+        <div style="font-size:12px;color:#888" id="qrLabel">Waiting for file or URL...</div>
+        <div class="qr-actions">
+          <button class="btn btn-success" id="downloadQrBtn">⬇ Download QR</button>
+          <button class="btn btn-primary" id="shareQrBtn">📤 Share</button>
+        </div>
+      </div>
+      <div class="mt-8 text-center" style="font-size:12px;color:#888">
+        <span id="directLinkDisplay"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-primary" id="saveBtn">💾 Save to IndexedDB</button>
+      <div id="saveStatus" class="mt-8 text-center" style="font-size:12px;color:#888"></div>
+    </div>
+  </div>
+
+  <!-- ========= TAB: SCAN ========= -->
+  <div class="tab-content d-none" id="tabScan">
+    <div class="card">
+      <h2><span>📷</span> Scan QR Code</h2>
+      <div class="scanner-container">
+        <div id="reader"></div>
+        <div class="scan-overlay">▢</div>
+      </div>
+      <div class="scan-result d-none" id="scanResult">
+        <strong>Scanned:</strong> <span id="scanText"></span>
+      </div>
+      <div class="result-actions d-none" id="scanActions">
+        <button class="btn btn-primary" id="scanOpenBtn">🌐 Open Link</button>
+        <button class="btn btn-success" id="scanInstallBtn">📲 Install APK</button>
+        <button class="btn" id="scanCopyBtn" style="background:var(--l)">📋 Copy</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span>🖼️</span> Scan from Image</h2>
+      <div class="upload-zone" style="padding:16px">
+        <input type="file" id="scanFileInput" accept="image/*">
+        <div style="font-size:14px;color:#aaa">Upload a screenshot with QR code</div>
+      </div>
+      <div id="imageScanResult" class="mt-8 text-center" style="font-size:12px;color:#888"></div>
+    </div>
+  </div>
+
+  <!-- ========= TAB: HISTORY ========= -->
+  <div class="tab-content d-none" id="tabHistory">
+    <div class="card">
+      <h2><span>📋</span> Stored Files</h2>
+      <div id="historyList">
+        <div style="text-align:center;padding:20px;color:#666;font-size:13px">No files stored yet</div>
+      </div>
+      <div class="mt-8">
+        <button class="btn btn-danger" id="clearHistoryBtn">🗑 Clear All</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hidden download trigger -->
+  <a id="downloadTrigger" style="display:none"></a>
+</div>
+
+<!-- QRCode.js -->
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<!-- Html5-QRCode -->
+<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+<script>
+(function(){
+'use strict';
+
+// ====================== CONFIG ======================
+const DB_NAME = 'APKLoaderDB';
+const DB_VER = 2;
+const STORE = 'files';
+const MAX_SIZE_MB = 200;
+
+// ====================== STATE ======================
+let currentFile = null;       // File object
+let currentFileData = null;   // {id, name, type, size, data:ArrayBuffer, timestamp}
+let currentQRText = '';
+let db = null;
+let qrCodeInstance = null;
+let html5QrCode = null;
+let isScanning = false;
+let storedCount = 0;
+let storedTotalSize = 0;
+
+// ====================== INDEXEDDB ======================
+function openDB(){
+  return new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = (e)=>{
+      const d = e.target.result;
+      if(!d.objectStoreNames.contains(STORE)){
+        const store = d.createObjectStore(STORE, {keyPath:'id', autoIncrement:true});
+        store.createIndex('name','name',{unique:false});
+        store.createIndex('timestamp','timestamp',{unique:false});
+      }
+    };
+    req.onsuccess = (e)=>{ db = e.target.result; updateStats(); resolve(db); };
+    req.onerror = (e)=>{ reject(e.target.error); };
+  });
+}
+
+function saveToDB(fileData){
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,'readwrite');
+    const store = tx.objectStore(STORE);
+    const req = store.put(fileData);
+    req.onsuccess = ()=>{ updateStats(); resolve(req.result); };
+    req.onerror = (e)=>reject(e.target.error);
+  });
+}
+
+function getAllFromDB(){
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,'readonly');
+    const store = tx.objectStore(STORE);
+    const req = store.getAll();
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = (e)=>reject(e.target.error);
+  });
+}
+
+function deleteFromDB(id){
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,'readwrite');
+    const store = tx.objectStore(STORE);
+    const req = store.delete(id);
+    req.onsuccess = ()=>{ updateStats(); resolve(); };
+    req.onerror = (e)=>reject(e.target.error);
+  });
+}
+
+function clearDB(){
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(STORE,'readwrite');
+    const store = tx.objectStore(STORE);
+    const req = store.clear();
+    req.onsuccess = ()=>{ updateStats(); resolve(); };
+    req.onerror = (e)=>reject(e.target.error);
+  });
+}
+
+async function updateStats(){
+  try {
+    const all = await getAllFromDB();
+    storedCount = all.length;
+    storedTotalSize = all.reduce((a,f)=>a+(f.size||0),0);
+    document.getElementById('storedBadge').textContent = `📦 ${storedCount} stored`;
+    document.getElementById('totalSize').textContent = (storedTotalSize/1048576).toFixed(1)+' MB';
+    renderHistory();
+  } catch(e){}
+}
+
+// ====================== QR CODE ======================
+function generateQR(text){
+  const container = document.getElementById('qrcode');
+  container.innerHTML = '';
+  if(!text) return;
+  currentQRText = text;
+  const size = Math.min(260, window.innerWidth - 80);
+  qrCodeInstance = new QRCode(container, {
+    text: text,
+    width: size,
+    height: size,
+    colorDark: '#1a1a2e',
+    colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+  document.getElementById('qrLabel').textContent = '📱 Scan to access';
+  document.getElementById('directLinkDisplay').innerHTML = 
+    `<small>🔗 <a href="${text}" target="_blank" style="color:var(--s)">${text.length > 50 ? text.slice(0,50)+'...' : text}</a></small>`;
+}
+
+function downloadQR(){
+  const canvas = document.querySelector('#qrcode canvas') || document.querySelector('#qrcode img');
+  if(!canvas) return;
+  const link = document.createElement('a');
+  if(canvas.tagName === 'CANVAS'){
+    link.download = 'qrcode.png';
+    link.href = canvas.toDataURL('image/png');
+  } else {
+    link.download = 'qrcode.png';
+    link.href = canvas.src;
+  }
+  link.click();
+}
+
+async function shareQR(){
+  const canvas = document.querySelector('#qrcode canvas');
+  if(!canvas) return;
+  try {
+    const blob = await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+    if(navigator.share){
+      await navigator.share({
+        title: 'APK QR Code',
+        text: currentQRText,
+        files: [new File([blob], 'qrcode.png', {type:'image/png'})]
+      });
+    } else {
+      downloadQR();
+    }
+  } catch(e){ /* user cancelled */ }
+}
+
+// ====================== SCANNER ======================
+async function startScanner(){
+  if(html5QrCode) return;
+  try {
+    html5QrCode = new Html5Qrcode("reader");
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 220, height: 220 } },
+      onScanSuccess,
+      onScanFailure
+    );
+    isScanning = true;
+  } catch(e){
+    console.warn('Camera start failed:', e);
+    document.querySelector('.scanner-container').innerHTML = 
+      '<div style="padding:40px 20px;text-align:center;color:#888;font-size:13px">⚠️ Camera unavailable: '+e.message+'</div>';
+  }
+}
+
+function stopScanner(){
+  if(html5QrCode){
+    try { html5QrCode.stop(); } catch(e){}
+    try { html5QrCode.clear(); } catch(e){}
+    html5QrCode = null;
+    isScanning = false;
+  }
+}
+
+function onScanSuccess(decodedText, decodedResult){
+  showScanResult(decodedText);
+  // Vibrate on success
+  try { navigator.vibrate && navigator.vibrate(100); } catch(e){}
+}
+
+function onScanFailure(err){ /* silent */ }
+
+function showScanResult(text){
+  const resultDiv = document.getElementById('scanResult');
+  const actionsDiv = document.getElementById('scanActions');
+  document.getElementById('scanText').textContent = text;
+  resultDiv.classList.remove('d-none');
+  actionsDiv.classList.remove('d-none');
+  
+  const isApk = text.toLowerCase().includes('.apk');
+  document.getElementById('scanInstallBtn').style.display = isApk ? 'inline-flex' : 'none';
+}
+
+// ====================== SCAN FROM IMAGE ======================
+async function scanFromImage(file){
+  const resultDiv = document.getElementById('imageScanResult');
+  resultDiv.textContent = '⏳ Scanning...';
+  try {
+    const html5QrCode = new Html5Qrcode("reader");
+    const result = await html5QrCode.scanFile(file, true);
+    showScanResult(result);
+    resultDiv.innerHTML = `✅ <strong>Scanned:</strong> ${result}`;
+    html5QrCode.clear();
+  } catch(e){
+    resultDiv.textContent = '❌ No QR code found in image';
+  }
+}
+
+// ====================== FILE HANDLING ======================
+function handleFile(file){
+  currentFile = file;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const zone = document.getElementById('uploadZone');
+  const fname = document.getElementById('fileName');
+  
+  zone.classList.add('has-file');
+  fname.classList.remove('d-none');
+  fname.textContent = `📄 ${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+  document.getElementById('zoneIcon').textContent = ext === 'apk' ? '📱' : '🖼️';
+  document.getElementById('zoneLabel').textContent = file.name;
+  document.getElementById('zoneHint').textContent = `${(file.size/1048576).toFixed(2)} MB`;
+  
+  // Read file
+  const reader = new FileReader();
+  reader.onload = async (e)=>{
+    const data = e.target.result;
+    currentFileData = {
+      name: file.name,
+      type: file.type || (ext === 'apk' ? 'application/vnd.android.package-archive' : 'image/'+ext),
+      size: file.size,
+      data: data,
+      timestamp: Date.now()
+    };
+    
+    // Create blob URL for QR
+    const blob = new Blob([data], {type: currentFileData.type});
+    const url = URL.createObjectURL(blob);
+    currentQRText = url;
+    generateQR(url);
+    
+    document.getElementById('saveStatus').textContent = 'Ready to save';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function processURL(url){
+  if(!url) return;
+  currentQRText = url;
+  generateQR(url);
+  currentFile = null;
+  currentFileData = {name: url.split('/').pop() || 'link', type: 'url', size: 0, data: null, timestamp: Date.now(), url: url};
+  document.getElementById('saveStatus').textContent = 'URL ready';
+}
+
+// ====================== INSTALL / DOWNLOAD ======================
+function triggerInstall(url){
+  // Method 1: Direct intent scheme for Chrome on Android
+  const intentUrl = `intent://${url.replace(/^https?:\/\//,'')}#Intent;scheme=https;action=android.intent.action.VIEW;end`;
+  
+  // Method 2: Create a download + auto-open via temporary iframe
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = url.split('/').pop() || 'download.apk';
+  document.body.appendChild(a);
+  a.click();
+  
+  // Try to trigger Package Installer via intent link
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = intentUrl;
+    document.body.appendChild(iframe);
+    setTimeout(()=>{ document.body.removeChild(iframe); }, 2000);
+  } catch(e){}
+  
+  // Fallback: open in new tab (triggers download on Android Chrome)
+  setTimeout(()=>{
+    window.open(url, '_blank');
+  }, 300);
+  
+  setTimeout(()=>{ document.body.removeChild(a); }, 500);
+}
+
+function triggerDirectInstall(data, filename){
+  const blob = new Blob([data], {type: 'application/vnd.android.package-archive'});
+  const url = URL.createObjectURL(blob);
+  
+  // 1. Trigger download (Android will show notification to install)
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename || 'app.apk';
+  document.body.appendChild(a);
+  a.click();
+  
+  // 2. Try opening via intent to trigger package installer directly
+  setTimeout(()=>{
+    try {
+      const intentLink = `intent://${url.replace(/^https?:\/\//,'')}#Intent;scheme=https;action=android.intent.action.VIEW;type=application/vnd.android.package-archive;end`;
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = intentLink;
+      document.body.appendChild(iframe);
+      setTimeout(()=>{ document.body.removeChild(iframe); }, 3000);
+    } catch(e){}
+  }, 500);
+  
+  // 3. Open directly
+  setTimeout(()=>{
+    window.open(url, '_blank');
+  }, 800);
+  
+  setTimeout(()=>{ document.body.removeChild(a); }, 100);
+}
+
+// ====================== RENDER HISTORY ======================
+async function renderHistory(){
+  const list = document.getElementById('historyList');
+  try {
+    const all = await getAllFromDB();
+    if(!all.length){
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:#666;font-size:13px">No files stored yet</div>';
+      return;
+    }
+    list.innerHTML = all.reverse().map(f=>{
+      const isApk = f.name && f.name.toLowerCase().endsWith('.apk');
+      const icon = isApk ? '📱' : '🖼️';
+      const sizeStr = f.size ? (f.size/1024).toFixed(1)+' KB' : 'N/A';
+      const time = f.timestamp ? new Date(f.timestamp).toLocaleString() : 'Unknown';
+      const id = f.id;
+      return `<div class="history-item">
+        <div class="hi-icon">${icon}</div>
+        <div class="hi-info">
+          <div class="hi-name">${f.name || 'Unknown'}</div>
+          <div class="hi-time">${sizeStr} · ${time}</div>
+        </div>
+        ${isApk ? `<button class="hi-btn install" data-id="${id}">📲 Install</button>` : ''}
+        <button class="hi-btn" data-id="${id}" data-action="download">⬇ Download</button>
+        <button class="hi-btn" data-id="${id}" data-action="qr">QR</button>
+        <button class="hi-btn" data-id="${id}" data-action="delete" style="background:var(--t)">✕</button>
+      </div>`;
+    }).join('');
+    
+    // Attach events
+    list.querySelectorAll('.hi-btn').forEach(btn=>{
+      btn.addEventListener('click', async (e)=>{
+        const id = parseInt(btn.dataset.id);
+        const action = btn.dataset.action || 'install';
+        const all = await getAllFromDB();
+        const file = all.find(f=>f.id === id);
+        if(!file) return;
+        
+        if(action === 'install' && file.data){
+          triggerDirectInstall(file.data, file.name);
+        } else if(action === 'download' && file.data){
+          const blob = new Blob([file.data], {type: file.type || 'application/octet-stream'});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = file.name;
+          a.click();
+          setTimeout(()=>URL.revokeObjectURL(url), 5000);
+        } else if(action === 'qr'){
+          if(file.data){
+            const blob = new Blob([file.data], {type: file.type});
+            const url = URL.createObjectURL(blob);
+            generateQR(url);
+            // Switch to upload tab
+            switchTab('upload');
+          } else if(file.url){
+            generateQR(file.url);
+            switchTab('upload');
+          }
+        } else if(action === 'delete'){
+          await deleteFromDB(id);
+        }
+      });
+    });
+  } catch(e){
+    list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t)">Error loading history</div>';
+  }
+}
+
+// ====================== TAB SWITCHING ======================
+function switchTab(tabId){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.add('d-none'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab'+tabId.charAt(0).toUpperCase()+tabId.slice(1)).classList.remove('d-none');
+  document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
+  
+  if(tabId === 'scan'){
+    startScanner();
+  } else {
+    stopScanner();
+  }
+}
+
+// ====================== EVENT BINDING ======================
+function init(){
+  // File input
+  document.getElementById('fileInput').addEventListener('change', (e)=>{
+    if(e.target.files[0]) handleFile(e.target.files[0]);
+  });
+  
+  // Upload zone click
+  document.getElementById('uploadZone').addEventListener('click', (e)=>{
+    if(e.target.tagName !== 'INPUT') document.getElementById('fileInput').click();
+  });
+  
+  // Drag & drop
+  const zone = document.getElementById('uploadZone');
+  zone.addEventListener('dragover', (e)=>{ e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', ()=>{ zone.classList.remove('dragover'); });
+  zone.addEventListener('drop', (e)=>{
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    if(e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  
+  // URL fetch
+  document.getElementById('urlFetchBtn').addEventListener('click', ()=>{
+    const url = document.getElementById('urlInput').value.trim();
+    if(!url) return;
+    processURL(url);
+    document.getElementById('urlStatus').textContent = '✅ URL loaded for QR';
+  });
+  
+  document.getElementById('urlInput').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') document.getElementById('urlFetchBtn').click();
+  });
+  
+  // Save
+  document.getElementById('saveBtn').addEventListener('click', async ()=>{
+    if(!currentFileData && !currentFile) return;
+    const status = document.getElementById('saveStatus');
+    
+    if(!currentFileData && currentFile){
+      // Re-read
+      const reader = new FileReader();
+      reader.onload = async (e)=>{
+        currentFileData = {
+          name: currentFile.name,
+          type: currentFile.type || 'application/octet-stream',
+          size: currentFile.size,
+          data: e.target.result,
+          timestamp: Date.now()
+        };
+        await saveToDB(currentFileData);
+        status.textContent = '✅ Saved successfully!';
+        status.style.color = 'var(--s)';
+        updateStats();
+      };
+      reader.readAsArrayBuffer(currentFile);
+      return;
+    }
+    
+    if(currentFileData.data || currentFileData.url){
+      await saveToDB(currentFileData);
+      status.textContent = '✅ Saved to IndexedDB!';
+      status.style.color = 'var(--s)';
+      updateStats();
+    }
+  });
+  
+  // QR actions
+  document.getElementById('downloadQrBtn').addEventListener('click', downloadQR);
+  document.getElementById('shareQrBtn').addEventListener('click', shareQR);
+  
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      switchTab(tab.dataset.tab);
+    });
+  });
+  
+  // Scan actions
+  document.getElementById('scanOpenBtn').addEventListener('click', ()=>{
+    const text = document.getElementById('scanText').textContent;
+    window.open(text, '_blank');
+  });
+  
+  document.getElementById('scanInstallBtn').addEventListener('click', ()=>{
+    const text = document.getElementById('scanText').textContent;
+    triggerInstall(text);
+  });
+  
+  document.getElementById('scanCopyBtn').addEventListener('click', ()=>{
+    const text = document.getElementById('scanText').textContent;
+    navigator.clipboard.writeText(text).catch(()=>{
+      document.getElementById('scanText').select();
+      document.execCommand('copy');
+    });
+  });
+  
+  // Scan from image
+  document.getElementById('scanFileInput').addEventListener('change', (e)=>{
+    if(e.target.files[0]) scanFromImage(e.target.files[0]);
+  });
+  
+  // Clear history
+  document.getElementById('clearHistoryBtn').addEventListener('click', async ()=>{
+    if(confirm('Delete all stored files?')){
+      await clearDB();
+    }
+  });
+  
+  // Init DB
+  openDB().then(()=>{
+    console.log('APK Loader ready');
+  }).catch(e=>{
+    console.error('DB error:', e);
+  });
+}
+
+// ====================== START ======================
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
+
+})();
+</script>
+</body>
+</html>
